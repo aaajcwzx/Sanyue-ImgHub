@@ -53,6 +53,7 @@
                     <div class="card-header">
                         <div class="card-title">
                             <span class="channel-name">{{ channel.name || $t('sysUpload.unnamedChannel') }}</span>
+                            <el-tag v-if="channel.provider === 'qiniu'" size="small" type="info">{{ $t('sysUpload.qiniuProvider') }}</el-tag>
                             <el-tag v-if="channel.fixed" size="small" type="warning">{{ $t('sysUpload.envVariable') }}</el-tag>
                         </div>
                         <el-switch v-model="channel.enabled" size="small" @click.stop @change="saveSettings"/>
@@ -189,8 +190,20 @@
                     </el-form-item>
                 </template>
                 <template v-else-if="newChannel.type === 's3'">
+                    <el-form-item :label="$t('sysUpload.storageProvider')">
+                        <el-select v-model="newChannel.provider" @change="onStorageProviderChange">
+                            <el-option :label="$t('sysUpload.genericS3')" value=""/>
+                            <el-option :label="$t('sysUpload.qiniuProvider')" value="qiniu"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item v-if="newChannel.provider === 'qiniu'" :label="$t('sysUpload.bucketRegion')">
+                        <el-select :model-value="newChannel.region" @change="onQiniuRegionChange">
+                            <el-option v-for="region in qiniuRegions" :key="region" :label="$t('sysUpload.qiniuRegions.' + region)" :value="region"/>
+                        </el-select>
+                    </el-form-item>
+                    <p v-if="newChannel.provider === 'qiniu'" class="qiniu-help">{{ $t('sysUpload.qiniuTip') }}</p>
                     <el-form-item :label="$t('sysUpload.endpointLabel')" prop="endpoint">
-                        <el-input v-model="newChannel.endpoint" :placeholder="$t('sysUpload.endpointPlaceholder')"/>
+                        <el-input v-model="newChannel.endpoint" :readonly="newChannel.provider === 'qiniu'" :placeholder="$t('sysUpload.endpointPlaceholder')"/>
                     </el-form-item>
                     <el-form-item>
                         <template #label>
@@ -210,10 +223,10 @@
                         </template>
                         <el-input v-model="newChannel.userAgent" :placeholder="$t('sysUpload.userAgentPlaceholder')"/>
                     </el-form-item>
-                    <el-form-item :label="$t('sysUpload.bucketName')" prop="bucketName">
+                    <el-form-item :label="$t(newChannel.provider === 'qiniu' ? 'sysUpload.qiniuBucketName' : 'sysUpload.bucketName')" prop="bucketName">
                         <el-input v-model="newChannel.bucketName" :placeholder="$t('sysUpload.bucketNamePlaceholder')"/>
                     </el-form-item>
-                    <el-form-item :label="$t('sysUpload.bucketRegion')" prop="region">
+                    <el-form-item v-if="newChannel.provider !== 'qiniu'" :label="$t('sysUpload.bucketRegion')" prop="region">
                         <el-input v-model="newChannel.region" :placeholder="$t('sysUpload.bucketRegionPlaceholder')"/>
                     </el-form-item>
                     <el-form-item :label="$t('sysUpload.accessKeyId')" prop="accessKeyId">
@@ -471,8 +484,9 @@
                     </template>
                 </template>
                 <template v-else-if="currentChannelType === 's3'">
+                    <p v-if="editChannel.provider === 'qiniu'" class="qiniu-help">{{ $t('sysUpload.qiniuTip') }}</p>
                     <el-form-item :label="$t('sysUpload.endpointLabel')" prop="endpoint">
-                        <el-input v-model="editChannel.endpoint" :disabled="editChannel.fixed"/>
+                        <el-input v-model="editChannel.endpoint" :disabled="editChannel.fixed" :readonly="editChannel.provider === 'qiniu'"/>
                     </el-form-item>
                     <el-form-item>
                         <template #label>
@@ -492,11 +506,14 @@
                         </template>
                         <el-input v-model="editChannel.userAgent" :placeholder="$t('sysUpload.userAgentPlaceholder')"/>
                     </el-form-item>
-                    <el-form-item :label="$t('sysUpload.bucketName')" prop="bucketName">
+                    <el-form-item :label="$t(editChannel.provider === 'qiniu' ? 'sysUpload.qiniuBucketName' : 'sysUpload.bucketName')" prop="bucketName">
                         <el-input v-model="editChannel.bucketName" :disabled="editChannel.fixed"/>
                     </el-form-item>
                     <el-form-item :label="$t('sysUpload.bucketRegion')" prop="region">
-                        <el-input v-model="editChannel.region" :disabled="editChannel.fixed"/>
+                        <el-select v-if="editChannel.provider === 'qiniu'" :model-value="editChannel.region" :disabled="editChannel.fixed" @change="region => editChannel = applyQiniuPreset(editChannel, region)">
+                            <el-option v-for="region in qiniuRegions" :key="region" :label="$t('sysUpload.qiniuRegions.' + region)" :value="region"/>
+                        </el-select>
+                        <el-input v-else v-model="editChannel.region" :disabled="editChannel.fixed"/>
                     </el-form-item>
                     <el-form-item :label="$t('sysUpload.accessKeyId')" prop="accessKeyId">
                         <el-input v-model="editChannel.accessKeyId" :disabled="editChannel.fixed" type="password" show-password/>
@@ -616,6 +633,7 @@
 
 <script>
 import fetchWithAuth from '@/utils/fetchWithAuth';
+import { applyQiniuPreset, QINIU_REGIONS } from '@/utils/qiniuConfig';
 import ChannelIcon from '@/components/icons/ChannelIcon.vue';
 import CustomSelect from './CustomSelect.vue';
 import FileExpirySettings from './FileExpirySettings.vue';
@@ -659,6 +677,7 @@ data() {
     telegramSettings: { loadBalance: { enabled: false }, channels: [] },
     cfr2Settings: { channels: [] },
     s3Settings: { loadBalance: { enabled: false }, channels: [] },
+    qiniuRegions: QINIU_REGIONS,
     discordSettings: { loadBalance: { enabled: false }, channels: [] },
     huggingfaceSettings: { loadBalance: { enabled: false }, channels: [] },
     webdavSettings: { loadBalance: { enabled: false }, channels: [] },
@@ -684,6 +703,7 @@ data() {
         chatId: '',
         proxyUrl: '',
         // S3
+        provider: '',
         endpoint: '',
         cdnDomain: '',
         userAgent: '',
@@ -779,6 +799,19 @@ computed: {
     }
 },
 methods: {
+    applyQiniuPreset,
+    onStorageProviderChange() {
+        if (this.newChannel.provider === 'qiniu') {
+            this.newChannel = applyQiniuPreset(this.newChannel);
+        } else {
+            this.newChannel.endpoint = '';
+            this.newChannel.region = 'auto';
+            this.newChannel.pathStyle = false;
+        }
+    },
+    onQiniuRegionChange(region) {
+        this.newChannel = applyQiniuPreset(this.newChannel, region);
+    },
     async saveUploadRules() {
         if (this.savingUploadRules) return;
         this.savingUploadRules = true;
@@ -909,7 +942,7 @@ methods: {
         this.newChannel = {
             type: '', name: '', enabled: true,
             botToken: '', chatId: '', proxyUrl: '',
-            endpoint: '', bucketName: '', region: 'auto',
+            provider: '', endpoint: '', cdnDomain: '', bucketName: '', region: 'auto',
             accessKeyId: '', secretAccessKey: '', pathStyle: false, userAgent: '',
             quota: { enabled: false, limitGB: 10, threshold: 95 },
             channelId: '', isNitro: false,
@@ -937,6 +970,7 @@ methods: {
             botToken: '',
             chatId: '',
             proxyUrl: '',
+            provider: '',
             endpoint: '',
             cdnDomain: '',
             userAgent: '',
@@ -968,7 +1002,7 @@ methods: {
             const settings = this.getSettings(type);
 
             // 检查是否为保留名称（{type}_env）
-            const reservedNames = ['Telegram_env', 'R2_env', 'S3_env', 'Discord_env', 'HuggingFace_env', 'WebDAV_env'];
+            const reservedNames = ['Telegram_env', 'R2_env', 'S3_env', 'Qiniu_env', 'Discord_env', 'HuggingFace_env', 'WebDAV_env'];
             if (reservedNames.includes(name)) {
                 this.$message.warning(this.$t('sysUpload.reservedName'));
                 return;
@@ -999,6 +1033,7 @@ methods: {
                 });
             } else if (type === 's3') {
                 Object.assign(newChannelData, {
+                    provider: this.newChannel.provider || '',
                     endpoint: this.newChannel.endpoint,
                     cdnDomain: this.newChannel.cdnDomain,
                     userAgent: (this.newChannel.userAgent || '').trim(),
@@ -1306,6 +1341,11 @@ mounted() {
 </script>
 
 <style scoped>
+.qiniu-help {
+    margin: 0 0 18px;
+    color: var(--el-text-color-secondary);
+    line-height: 1.6;
+}
 .upload-settings {
     min-height: 500px;
     overflow-x: hidden;

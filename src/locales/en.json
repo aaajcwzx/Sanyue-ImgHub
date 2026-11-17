@@ -578,6 +578,12 @@
     "dupScanTimedOut": " (stopped early after exceeding the time budget)"
   },
   "sysUpload": {
+    "storageProvider": "Storage provider",
+    "genericS3": "Generic S3-compatible storage",
+    "qiniuProvider": "Qiniu Kodo",
+    "qiniuBucketName": "Qiniu S3 bucket name",
+    "qiniuTip": "Find the S3 bucket name in your Qiniu bucket overview and select its storage region. Use your Qiniu Access Key and Secret Key. A CDN domain is optional.",
+    "qiniuRegions": {"cn-east-1": "East China · Zhejiang", "cn-east-2": "East China · Zhejiang 2", "cn-north-1": "North China · Hebei", "cn-south-1": "South China · Guangdong", "us-north-1": "North America · Los Angeles", "ap-southeast-1": "Asia Pacific · Singapore", "ap-southeast-2": "Asia Pacific · Hanoi", "ap-southeast-3": "Asia Pacific · Ho Chi Minh City"},
     "title": "Upload Channel Management",
     "titleTooltip": "Manage all upload channel configurations. Click a card to view details or edit",
     "filterPlaceholder": "Filter channel type",
