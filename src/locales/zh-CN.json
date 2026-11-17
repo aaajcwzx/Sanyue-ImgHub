@@ -584,6 +584,12 @@
   }
 ,
   "sysUpload": {
+    "storageProvider": "存储服务商",
+    "genericS3": "通用 S3 兼容存储",
+    "qiniuProvider": "七牛云 Kodo",
+    "qiniuBucketName": "七牛 S3 空间名",
+    "qiniuTip": "请在七牛控制台的空间概览中查找 S3 空间名，并选择空间所在区域。访问密钥使用七牛 AK/SK；CDN 域名为可选项。",
+    "qiniuRegions": {"cn-east-1": "华东 · 浙江", "cn-east-2": "华东 · 浙江 2", "cn-north-1": "华北 · 河北", "cn-south-1": "华南 · 广东", "us-north-1": "北美 · 洛杉矶", "ap-southeast-1": "亚太 · 新加坡", "ap-southeast-2": "亚太 · 河内", "ap-southeast-3": "亚太 · 胡志明"},
     "title": "上传渠道管理",
     "titleTooltip": "管理所有上传渠道的配置，点击卡片查看详情或编辑",
     "filterPlaceholder": "筛选渠道类型",
